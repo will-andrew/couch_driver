@@ -294,7 +294,7 @@ namespace couch_controller
 					}
 
 				}
-ROS_INFO_STREAM(vels[0]);
+
 				controller->setVels(vels);
 			}
 	};
