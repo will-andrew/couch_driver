@@ -1,0 +1,8 @@
+<launch>
+	<node pkg="couch_teleop" type="couch_teleop_node" name="couch_teleop_node" output="screen">
+		<param name="joy_port" value="/dev/input/js0" />
+
+		<remap from="/teleop/cmd_raw" to="/controller/cmd_raw"/>
+	</node>
+</launch>
+

@@ -1,0 +1,12 @@
+<launch>
+	<node pkg="couch_controller" type="couch_controller_node" name="couch_controller_node" output="screen">
+		<param name="ip_addr" value="192.168.1.185" />
+		
+		<param name="publish_hz" value="100" />
+		<param name="cmdvel_timeout" value="0.5" /> <!-- seconds -->
+
+		<param name="max_linear" value="5.0" />
+		<param name="max_angular" value="5.0" />
+	</node>
+</launch>
+
