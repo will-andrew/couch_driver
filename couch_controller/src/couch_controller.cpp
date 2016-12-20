@@ -94,6 +94,12 @@ namespace couch_controller
 				WHEEL_CIRCUMFERENCE;
 			stat.vels[i] = (double)pkt.vels[i] / ENCODER_TICKS_PER_REV *
 				WHEEL_CIRCUMFERENCE / DRIVE_PERIOD;
+
+			if (i == 1 || i == 3) {
+				stat.disps[i] = -stat.disps[i];
+				stat.vels[i] = -stat.vels[i];
+			}
+
 			stat.mtemps[i] = pkt.mtemps[i];
 			stat.ctemps[i] = pkt.ctemps[i];
 
@@ -120,6 +126,14 @@ namespace couch_controller
 		spkt.right = -rightLoop->doLoop(stat.rVel);
 
 		sendPacket(&spkt, sizeof(spkt));*/
+		struct pkt_cmd_wheel spkt;
+
+		spkt.header.type = PKT_TYPE_WHEEL;
+		for (int i = 0; i < 4; i++) {
+			spkt.vels[i] = (int16_t)(loops[i]->doLoop(stat.vels[i]) * 2000);
+		}
+
+		sendPacket(&pkt, sizeof(pkt));
 
 		return stat;
 	}
@@ -134,18 +148,10 @@ namespace couch_controller
 	
 	void Controller::setVels(double (&vels)[4]) throw (SocketException)
 	{
-		struct pkt_cmd_wheel pkt;
 
-		pkt.header.type = PKT_TYPE_WHEEL;
 		for (int i = 0; i < 4; i++) {
-			//pkt.vels[i] = (int16_t)(vels[i] / WHEEL_DIAMETER * ENCODER_TICKS_PER_REV);
-			pkt.vels[i] = (int16_t)(vels[i] * 2000); // TODO fix this
+			loops[i]->setPoint = vels[i];
 		}
-
-		sendPacket(&pkt, sizeof(pkt));
-
-		/*leftLoop->setPoint = lVel;
-		rightLoop->setPoint = rVel;*/
 	}
 
 	int16_t truncGain(double gain)
@@ -159,34 +165,13 @@ namespace couch_controller
 		return (int16_t)(gain * 16383);
 	}
 
-	void Controller::setPIDGains(double lp, double li, double ld, double lffp, double lffd, double lffdd,
-			double rp, double ri, double rd, double rffp, double rffd, double rffdd) throw (SocketException)
+	void Controller::setPIDGains(double f, double i, double maxAccel) throw (SocketException)
 	{
-		/*struct pkt_cmd_pid pkt;
-
-		pkt.header.type = PKT_TYPE_PID;
-		pkt.l_p = truncGain(lp);
-		pkt.l_i = truncGain(li);
-		pkt.l_d = truncGain(ld);
-		pkt.r_p = truncGain(rp);
-		pkt.r_i = truncGain(ri);
-		pkt.r_d = truncGain(rd);
-
-		sendPacket(&pkt, sizeof(pkt));*/
-
-		/*leftLoop->kp = lp;
-		leftLoop->ki = li;
-		leftLoop->kd = ld;
-		leftLoop->kffp = lffp;
-		leftLoop->kffd = lffd;
-		leftLoop->kffdd = lffdd;
-
-		rightLoop->kp = rp;
-		rightLoop->ki = ri;
-		rightLoop->kd = rd;
-		rightLoop->kffp = rffp;
-		rightLoop->kffd = rffd;
-		rightLoop->kffdd = rffdd;*/
+		for (int i = 0; i < 4; i++) {
+			loops[i]->ki = i;
+			loops[i]->kffp = f;
+			loops[i]->maxAcceleration = maxAccel;
+		}
 	}
 
 	void Controller::setStatusHz(uint8_t hz) throw (SocketException)

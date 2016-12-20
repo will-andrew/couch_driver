@@ -16,7 +16,7 @@ namespace couch_controller
 			ControlLoop(double dt, double maxAccel = 0)
 				: kp(0), ki(0), kd(0), dt(dt), kffp(0), kffd(0), kffdd(0), setPoint(0), prevErr(0), integral(0), effSetPoint(0), maxAcceleration(maxAccel) {}
 
-			int16_t doLoop(double measured);
+			double doLoop(double measured);
 
 			void zeroIntegrator();
 			

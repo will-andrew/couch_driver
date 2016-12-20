@@ -43,22 +43,11 @@ namespace couch_controller
 
 				setTime();
 
-				/*double lp, li, ld, lffp, lffd, lffdd, rp, ri, rd, rffp, rffd, rffdd;
-				pnh.param("lp", lp, 0.30);
-				pnh.param("li", li, 0.03);
-				pnh.param("ld", ld, 0.01);
-				pnh.param("lffp", lffp, 0.0);
-				pnh.param("lffd", lffd, 0.0);
-				pnh.param("lffdd", lffdd, 0.0);
-
-				pnh.param("rp", rp, 0.30);
-				pnh.param("ri", ri, 0.03);
-				pnh.param("rd", rd, 0.01);
-				pnh.param("rffp", rffp, 0.0);
-				pnh.param("rffd", rffd, 0.0);
-				pnh.param("rffdd", rffdd, 0.0);
-				controller->setPIDGains(lp, li, ld, lffp, lffd, lffdd, rp, ri, rd, rffp, rffd, rffdd);
-				*/
+				double kf, ki, kMaxAccel;
+				pnh.param("kf", kf, 5.0);
+				pnh.param("ki", ki, 0.005);
+				pnh.param("kMaxAccel", kMaxAccel, 2.0);
+				controller->setPIDGains(kf, ki, kMaxAccel);
 
 				int decimation;
 				pnh.param("vbat_estop_temp_decimation", decimation, 10);

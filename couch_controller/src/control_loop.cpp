@@ -6,7 +6,7 @@
 
 namespace couch_controller
 {
-	int16_t ControlLoop::doLoop(double measured)
+	double ControlLoop::doLoop(double measured)
 	{
     double diffSetPoint = setPoint - effSetPoint;
 
@@ -39,18 +39,26 @@ namespace couch_controller
 
 		double output = (kp * err + ki * integral + kffp * effSetPoint + kffd * diffSetPoint);
 
-		int16_t rawOutput = (int16_t)(output * (2500 / 3.5 / 3));
+		//int16_t rawOutput = (int16_t)(output * (2500 / 3.5 / 3));
 
 		//printf("this=%p, set=%lf\t eset=%2lf\tmeasured=%2lf\toutput=%2lf\trawout=%d\n", this, setPoint, effSetPoint, measured, output, rawOutput);
 		//printf("this=%p, set=%lf\t eset=%2lf, meas=%2f, err=%2f, pout=%2f, iout=%2f, ffout=%2f\n", this, setPoint, effSetPoint, measured, err, kp*err, ki*integral, kd*effSetPoint);
 
     // Hysteruses removal
-    if (fabs(rawOutput) > 20){
+    /*if (fabs(rawOutput) > 20){
       if (fabs(rawOutput) < 120){
         rawOutput += 120 * (rawOutput >0 ? 1:-1);
       }
     }
-		return rawOutput;
+		return rawOutput;*/
+
+		if (output > 1) {
+			output = 1;
+		} else if (output < -1) {
+			output = -1;
+		}
+
+		return output;
 	}
 
 	void ControlLoop::zeroIntegrator()
