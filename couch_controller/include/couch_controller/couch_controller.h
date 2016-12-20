@@ -59,10 +59,10 @@ struct controllerStatus
 class Controller
 {
 	public:
-	static const double ENCODER_TICKS_PER_REV = 8192;
-	static const double WHEEL_DIAMETER = 171.0 * 3.14 / 1000;
-	static const double BASE_WIDTH = 1.5;
-	static const double BASE_LENGTH = 0.75;
+	static const double ENCODER_TICKS_PER_REV = 8192 * 7.5;
+	static const double WHEEL_CIRCUMFERENCE = 250.0 * 3.14 / 1000;
+	static const double BASE_WIDTH = 0.485;
+	static const double BASE_LENGTH = 1.060;
 	static const double DRIVE_PERIOD = 0.02; // From firmware, drive.c LOOP_RATE
 	static const int FRONT_LEFT = 1;
 	static const int BACK_LEFT = 0;

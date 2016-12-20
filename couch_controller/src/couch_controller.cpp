@@ -90,8 +90,10 @@ namespace couch_controller
 		stat.timestamp = pkt.timestamp;
 
 		for (int i = 0; i < 4; i++) {
-			stat.disps[i] = (double)pkt.disps[i] / ENCODER_TICKS_PER_REV * WHEEL_DIAMETER;
-			stat.vels[i] = (double)pkt.vels[i] / ENCODER_TICKS_PER_REV * WHEEL_DIAMETER / DRIVE_PERIOD;
+			stat.disps[i] = (double)pkt.disps[i] / ENCODER_TICKS_PER_REV *
+				WHEEL_CIRCUMFERENCE;
+			stat.vels[i] = (double)pkt.vels[i] / ENCODER_TICKS_PER_REV *
+				WHEEL_CIRCUMFERENCE / DRIVE_PERIOD;
 			stat.mtemps[i] = pkt.mtemps[i];
 			stat.ctemps[i] = pkt.ctemps[i];
 
