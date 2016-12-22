@@ -133,7 +133,7 @@ namespace couch_controller
 			spkt.vels[i] = (int16_t)(loops[i]->doLoop(stat.vels[i]) * 2000);
 		}
 
-		sendPacket(&pkt, sizeof(pkt));
+		sendPacket(&spkt, sizeof(spkt));
 
 		return stat;
 	}
