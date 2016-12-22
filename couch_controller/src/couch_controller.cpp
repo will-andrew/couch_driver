@@ -95,7 +95,7 @@ namespace couch_controller
 			stat.vels[i] = (double)pkt.vels[i] / ENCODER_TICKS_PER_REV *
 				WHEEL_CIRCUMFERENCE / DRIVE_PERIOD;
 
-			if (i == 1 || i == 3) {
+			if (i == 0 || i == 3) {
 				stat.disps[i] = -stat.disps[i];
 				stat.vels[i] = -stat.vels[i];
 			}
@@ -133,6 +133,8 @@ namespace couch_controller
 			spkt.vels[i] = (int16_t)(loops[i]->doLoop(stat.vels[i]) * 2000);
 		}
 
+		printf("speed %d\t%d\t%d\t%d\n", spkt.vels[0], spkt.vels[1], spkt.vels[2], spkt.vels[3]);
+
 		sendPacket(&spkt, sizeof(spkt));
 
 		return stat;
@@ -165,11 +167,13 @@ namespace couch_controller
 		return (int16_t)(gain * 16383);
 	}
 
-	void Controller::setPIDGains(double f, double i, double maxAccel) throw (SocketException)
+	void Controller::setPIDGains(double kf, double kp, double ki, double kd, double maxAccel) throw (SocketException)
 	{
 		for (int i = 0; i < 4; i++) {
-			loops[i]->ki = i;
-			loops[i]->kffp = f;
+			loops[i]->kp = kp;
+			loops[i]->ki = ki;
+			loops[i]->kd = kd;
+			loops[i]->kffp = kf;
 			loops[i]->maxAcceleration = maxAccel;
 		}
 	}

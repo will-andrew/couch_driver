@@ -76,7 +76,7 @@ class Controller
 
 	void setVels(double (&vels)[4]) throw (SocketException);
 	 
-	void setPIDGains(double f, double i, double maxAccel) throw (SocketException);
+	void setPIDGains(double kf, double kp, double ki, double kd, double maxAccel) throw (SocketException);
 
 	void setStatusHz(uint8_t hz) throw (SocketException); // Set to 0 to stop
 

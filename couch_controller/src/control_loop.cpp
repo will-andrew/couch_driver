@@ -4,6 +4,8 @@
 
 #include "couch_controller/control_loop.h"
 
+#define MAX_OUTPUT 0.5
+
 namespace couch_controller
 {
 	double ControlLoop::doLoop(double measured)
@@ -23,6 +25,7 @@ namespace couch_controller
     }
 
 		double err = effSetPoint - measured;
+		printf("err = %lf\n", err);
 
 		integral += err * dt;
     if (setPoint == 0 && measured == 0)
@@ -52,10 +55,10 @@ namespace couch_controller
     }
 		return rawOutput;*/
 
-		if (output > 1) {
-			output = 1;
-		} else if (output < -1) {
-			output = -1;
+		if (output > MAX_OUTPUT) {
+			output = MAX_OUTPUT;
+		} else if (output < -MAX_OUTPUT) {
+			output = -MAX_OUTPUT;
 		}
 
 		return output;

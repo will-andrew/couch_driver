@@ -43,11 +43,13 @@ namespace couch_controller
 
 				setTime();
 
-				double kf, ki, kMaxAccel;
-				pnh.param("kf", kf, 5.0);
+				double kf, kp, ki, kd, kMaxAccel;
+				pnh.param("kf", kf, 0.2);
+				pnh.param("kp", kp, 0.2);
 				pnh.param("ki", ki, 0.005);
+				pnh.param("kd", kd, 0.0);
 				pnh.param("kMaxAccel", kMaxAccel, 2.0);
-				controller->setPIDGains(kf, ki, kMaxAccel);
+				controller->setPIDGains(kf, kp, ki, kd, kMaxAccel);
 
 				int decimation;
 				pnh.param("vbat_estop_temp_decimation", decimation, 10);
@@ -276,10 +278,10 @@ namespace couch_controller
 				vels[Controller::BACK_RIGHT] = msg->data[3];
 
 				for (int i = 0; i < 4; i++) {
-					if (vels[i] > 1) {
-						vels[i] = 1;
-					} else if (vels[i] < -1) {
-						vels[i] = -1;
+					if (vels[i] > 3) {
+						vels[i] = 3;
+					} else if (vels[i] < -3) {
+						vels[i] = -3;
 					}
 
 				}
