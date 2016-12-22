@@ -42,9 +42,9 @@ namespace couch_teleop
 			TeleopNode(ros::NodeHandle nh, ros::NodeHandle pnh, int joy_fd) : 
 				nh(nh), pnh(pnh)
 			{
-				sx = 32000.0;
-				sy = 32000.0;
-				srot = 30000.0;
+				sx = 2.5;
+				sy = 2.5;
+				srot = 2;
 				minSpeed = 0.1;
 
 				joystick_fd = joy_fd;
@@ -159,9 +159,12 @@ namespace couch_teleop
 				//cout << x << " " << y << " " << rot << endl;
 
 				//Joystick cubic scaling
-				double x1 = pow(x, 3) * sx;
-				double y1 = pow(y, 3) * sy;
-				double rot1 = pow(rot, 3) * srot; 
+				double x1 = pow(x, 2) * sx;
+				double y1 = pow(y, 2) * sy;
+				double rot1 = pow(rot, 2) * srot; 
+				if (x < 0) x1 = -x1;
+				if (y < 0) y1 = -y1;
+				if (rot < 0) rot1 = -rot1;
 				
 				//High-speed trigger.    
 				if (js->axis[2] < 0) {
@@ -196,10 +199,10 @@ namespace couch_teleop
 				//cout << "Setting couch motors to: " << lfs << " " << rfs << " " << lbs << 
 				//	" " << rbs << endl;
 
-				cmdRawMsg.data[0] = lfs / 32767;
-				cmdRawMsg.data[1] = lbs / 32767;
-				cmdRawMsg.data[2] = rfs / 32767;
-				cmdRawMsg.data[3] = rbs / 32767;
+				cmdRawMsg.data[0] = lf;
+				cmdRawMsg.data[1] = lb;
+				cmdRawMsg.data[2] = rf;
+				cmdRawMsg.data[3] = rb;
 				cmdRawPub.publish(cmdRawMsg);
 			}
 	};
