@@ -8,7 +8,7 @@ namespace couch_controller
 	class ControlLoop
 	{
 		public:
-			static const double INTEGRAL_CAP = 2; // TODO make this a parameter in the node
+			static const double INTEGRAL_CAP = 0.5; // TODO make this a parameter in the node
 
 			ControlLoop(double p, double i, double d, double dt, double ffp, double ffd, double ffdd, double maxAccel = 0)
 				: kp(p), ki(i), kd(d), dt(dt), kffp(ffp), kffd(ffd), kffdd(ffdd), setPoint(0), prevErr(0), integral(0), effSetPoint(0), maxAcceleration(maxAccel) {}

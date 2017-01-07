@@ -25,22 +25,23 @@ namespace couch_controller
     }
 
 		double err = effSetPoint - measured;
-		printf("err = %lf\n", err);
+		//printf("err = %lf\n", err);
 
 		integral += err * dt;
     if (setPoint == 0 && measured == 0)
       integral = 0;
-		else if (integral > INTEGRAL_CAP)
+		else if (integral > (INTEGRAL_CAP / ki))
       integral = INTEGRAL_CAP;
-    else if (integral < -INTEGRAL_CAP)
+    else if (integral < -(INTEGRAL_CAP / ki))
       integral = -INTEGRAL_CAP;
+
+	printf("integral = %lf\n", integral);
 		
 
-		// Derivate not used at the moment
 		double derivative = (err - prevErr) / dt;
     prevErr = err;
 
-		double output = (kp * err + ki * integral + kffp * effSetPoint + kffd * diffSetPoint);
+		double output = (kp * err + ki * integral + kffp * effSetPoint + kd * derivative);
 
 		//int16_t rawOutput = (int16_t)(output * (2500 / 3.5 / 3));
 

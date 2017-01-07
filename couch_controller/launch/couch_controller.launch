@@ -9,10 +9,10 @@
 		<param name="max_angular" value="5.0" />
 
 		<param name="kf" value="0.2" />
-		<param name="kp" value="0.1" />
-		<param name="ki" value="0.06" />
-		<param name="kd" value="0.00" />
-		<param name="kMaxAccel" value="4.0" />
+		<param name="kp" value="0.8" />
+		<param name="ki" value="0.1" />
+		<param name="kd" value="0.1" />
+		<param name="kMaxAccel" value="2.0" />
 	</node>
 </launch>
 
