@@ -46,20 +46,35 @@ struct controllerStatus
 	double disps[4];
 	double vels[4];
 
-	double vBat;
+	float vBat;
 
 	int mtemps[4];
 	int ctemps[4];
 
-	double currents[4];
+	float currents[4];
+	float voltages[4];
+	int drives[4];
+	int errors[4];
+
+	int flags;
 
 	bool estop;
+};
+	
+enum pwrErrors {
+	PWR_ERROR_NONE = 0,
+	PWR_ERROR_PEAK_CURRENT = 1,
+	PWR_ERROR_AVE_CURRENT = 2,
+	PWR_ERROR_HIGH_VOLTAGE = 3,
+	PWR_ERROR_LOW_VOLTAGE = 4,
+	PWR_ERROR_HIGH_TEMP = 5,
+	N_PWR_ERRORS
 };
 
 class Controller
 {
 	public:
-	static const double ENCODER_TICKS_PER_REV = 8192 * 7.5;
+	static const double ENCODER_TICKS_PER_REV = 1024 * 7.5;
 	static const double WHEEL_CIRCUMFERENCE = 250.0 * 3.14 / 1000;
 	static const double BASE_WIDTH = 0.485;
 	static const double BASE_LENGTH = 1.060;
@@ -69,8 +84,14 @@ class Controller
 	static const int FRONT_RIGHT = 2;
 	static const int BACK_RIGHT = 3;
 
-	Controller(std::string ip) throw (SocketException);
+	// PWM values (us)
+	static const int US_STOP = 1500;
+	static const int US_RANGE = 500; // +/-
+
+	Controller(std::string ip, bool openLoop = false) throw (SocketException);
 	~Controller();
+
+	std::string getMCErrorString(int error);
 
 	struct controllerStatus getStatusBlocking() throw (SocketException);
 
@@ -84,14 +105,26 @@ class Controller
 
 	bool ping();
 
+	bool isOpenLoop();
+
 	private:
 	int udpSocket;
 	struct sockaddr_in controllerAddr;
 	uint8_t statusHz;
+	bool openLoop_;
+
+	int uptime_;
+
+	double oldDisps_[4];
+	struct timestamp oldTimestamp_;
 
 	ControlLoop *loops[4];
 
+	// Converts -1 to 1 range to a PWM value in us
+	uint16_t commandToUs(double cmd);
+
 	void sendPacket(void *pkt, size_t len) throw (SocketException);
+	void sendSpeedPacket(uint16_t (&us)[4]) throw (SocketException);
 };
 
 }

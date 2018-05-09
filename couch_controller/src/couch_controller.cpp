@@ -4,6 +4,7 @@
 #include <cstring>
 #include <cerrno>
 #include <string>
+#include <math.h>
 
 #include <arpa/inet.h>
 #include <sys/socket.h>
@@ -17,7 +18,7 @@
 
 namespace couch_controller
 {
-	Controller::Controller(std::string ip) throw (SocketException)
+	Controller::Controller(std::string ip, bool openLoop) throw (SocketException)
 	{
 		// Setup socket
 		udpSocket = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
@@ -30,6 +31,8 @@ namespace couch_controller
 		tv.tv_usec = UDP_TIMEOUT % 1000000;
 
 		setsockopt(udpSocket, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+
+		openLoop_ = openLoop;
 
 		// Store controller address
 		memset(&controllerAddr, 0, sizeof(controllerAddr));
@@ -92,24 +95,36 @@ namespace couch_controller
 		for (int i = 0; i < 4; i++) {
 			stat.disps[i] = (double)pkt.disps[i] / ENCODER_TICKS_PER_REV *
 				WHEEL_CIRCUMFERENCE;
-			stat.vels[i] = (double)pkt.vels[i] / ENCODER_TICKS_PER_REV *
-				WHEEL_CIRCUMFERENCE / DRIVE_PERIOD;
-
 			if (i == 1 || i == 3) {
 				stat.disps[i] = -stat.disps[i];
-				stat.vels[i] = -stat.vels[i];
 			}
+
+			// Determine velocity from first order displacement difference
+			if (oldTimestamp_.tv_sec == 0) {
+				stat.vels[i] = 0;
+			} else {
+				double delay = (stat.timestamp.tv_sec - oldTimestamp_.tv_sec)
+					+ (double)(stat.timestamp.tv_nsec - oldTimestamp_.tv_nsec) / 1000000000;
+				stat.vels[i] = (stat.disps[i] - oldDisps_[i]) / delay;
+			}
+			oldDisps_[i] = stat.disps[i];
 
 			stat.mtemps[i] = pkt.mtemps[i];
 			stat.ctemps[i] = pkt.ctemps[i];
 
-			stat.currents[i] = (double)pkt.currents[i] / 65536.0 * 3.3 / 0.045; // 45 mV / A
+			stat.drives[i] = pkt.drive_fb[i];
+			stat.errors[i] = pkt.error_codes[i];
+			stat.voltages[i] = (float)pkt.voltages[i] / 100;
+			stat.currents[i] = (float)pkt.currents[i] / 100 ;
 		}
+		oldTimestamp_ = stat.timestamp;
 
-		stat.vBat = (double)pkt.vbat / 65536.0 * 3.3 / 3.3 * 85.3;
+		stat.vBat = (float)pkt.vbat / 100;
 
 		static bool oldEstop = false;
 		stat.estop = (pkt.flags & 1) == 1;
+
+		stat.flags = pkt.flags;
 
 		if (!oldEstop && stat.estop) {
 			for (int i = 0; i < 4; i++) {
@@ -118,24 +133,59 @@ namespace couch_controller
 		}
 		oldEstop = stat.estop;
 
-		// Run drive loop
-		/*struct pkt_cmd_wheel spkt;
+		// If an encoder fails, switch to open loop
+		if (stat.flags & FLAG_ENCODERFAIL) {
+			openLoop_ = true;
+		}
 
-		spkt.header.type = PKT_TYPE_WHEEL;
-		spkt.left = leftLoop->doLoop(stat.lVel);
-		spkt.right = -rightLoop->doLoop(stat.rVel);
+		// If doing closed loop control, run the controller and send back a command
+		if (!openLoop_) {
+			uint16_t us[4];
+			for (int i = 0; i < 4; i++) {
+				us[i] = commandToUs(loops[i]->doLoop(stat.vels[i]));
+			}
+			sendSpeedPacket(us);
+		}
+		return stat;
+	}
 
-		sendPacket(&spkt, sizeof(spkt));*/
-		struct pkt_cmd_wheel spkt;
+	bool Controller::isOpenLoop()
+	{
+		return openLoop_;
+	}
 
-		spkt.header.type = PKT_TYPE_WHEEL;
+	std::string Controller::getMCErrorString(int error)
+	{
+		switch (error) {
+			case PWR_ERROR_NONE:
+				return "No error";
+			case PWR_ERROR_PEAK_CURRENT:
+				return "Peak current limit exceeded";
+			case PWR_ERROR_AVE_CURRENT:
+				return "Average current limit exceeded";
+			case PWR_ERROR_HIGH_VOLTAGE:
+				return "High voltage limit exceeded";
+			case PWR_ERROR_LOW_VOLTAGE:
+				return "Low voltage limit exceeded";
+			case PWR_ERROR_HIGH_TEMP:
+				return "High temperature limit exceeded";
+			default:
+				return "Unknown error";
+		}
+	}
+
+	void Controller::sendSpeedPacket(uint16_t (&us)[4]) throw (SocketException)
+	{
+		struct pkt_cmd_wheel pkt;
+
+		//std::cout << "Setting speeds to " << us[0] << ", " << us[1] << ", " << us[2] << ", " << us[3] << std::endl;
+
+		pkt.header.type = PKT_TYPE_WHEEL;
 		for (int i = 0; i < 4; i++) {
-			spkt.vels[i] = (int16_t)(loops[i]->doLoop(stat.vels[i]) * 2000);
+			pkt.pwms[i] = us[i];
 		}
 
 		sendPacket(&pkt, sizeof(pkt));
-
-		return stat;
 	}
 
 	void Controller::sendPacket(void *pkt, size_t len) throw (SocketException)
@@ -145,12 +195,31 @@ namespace couch_controller
 			throw SocketException("Sending", (int)(((pkt_header *)pkt)->type));
 		}
 	}
+
+	uint16_t Controller::commandToUs(double cmd)
+	{
+		if (cmd > 1) {
+			cmd = 1;
+		} else if (cmd < -1) {
+			cmd = -1;
+		}
+		return US_STOP + (int16_t)round(US_RANGE * cmd);
+	}
 	
 	void Controller::setVels(double (&vels)[4]) throw (SocketException)
 	{
-
-		for (int i = 0; i < 4; i++) {
-			loops[i]->setPoint = vels[i];
+		if (openLoop_) {
+			// Send commands directly
+			uint16_t us[4];
+			for (int i = 0; i < 4; i++) {
+				us[i] = commandToUs(vels[i]);
+			}
+		//std::cout << "Setting speeds to " << us[0] << ", " << us[1] << ", " << us[2] << ", " << us[3] << std::endl;
+			sendSpeedPacket(us);
+		} else {
+			for (int i = 0; i < 4; i++) {
+				loops[i]->setPoint = vels[i];
+			}
 		}
 	}
 

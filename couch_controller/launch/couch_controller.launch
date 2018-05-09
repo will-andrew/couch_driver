@@ -11,6 +11,8 @@
 		<param name="kf" value="5.0" />
 		<param name="ki" value="0.005" />
 		<param name="kMaxAccel" value="2.0" />
+
+		<param name="open_loop" value="true" />
 	</node>
 </launch>
 

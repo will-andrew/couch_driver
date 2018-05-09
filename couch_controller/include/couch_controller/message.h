@@ -1,14 +1,12 @@
 /* 
- * File:   udp_message.h
+ * File:   message.h
  * Author: will
  *
- * Created on 8 April 2015, 2:50 PM
+ * Created on 17 August 2017, 9:44 AM
  */
 
-// THIS FILE NEEDS GNU99, LITTLE ENDIAN
-
-#ifndef UDP_MESSAGE_H
-#define	UDP_MESSAGE_H
+#ifndef MESSAGE_H
+#define	MESSAGE_H
 
 #include <stdint.h>
 
@@ -25,6 +23,9 @@ struct timestamp {
     uint32_t tv_nsec;
 };
 
+#define FLAG_ESTOP (0)
+#define FLAG_ENCODERFAIL (1)
+
 // ----[Packets received by controller]-----------------------------------------
 // A - start stop stream of status packets to the IP that sent this at the
 // requested frequency
@@ -34,11 +35,11 @@ struct pkt_cmd_stream {
 	uint8_t frequency; // Hz, approx. 0 = stopped
 } __attribute__((packed));
 
-// B - set wheel velocity setpoints
+// B - set wheel PWM outputs
 #define PKT_TYPE_WHEEL 'B'
 struct pkt_cmd_wheel {
 	struct pkt_header header;
-	int16_t vels[4];
+	uint16_t pwms[4];
 } __attribute__((packed));
 
 // F - set time
@@ -65,17 +66,21 @@ struct pkt_stat_stream {
 
     // Wheel displacement in ticks
     int32_t disps[4];
-    // Wheel velocities in ticks per SECOND
-    int16_t vels[4];
+	int16_t vels[4]; // Ticks per second
 
-    uint16_t vbat; // in mv
+    uint16_t vbat; // mV
 	
 	int8_t mtemps[4]; // Motor temperatures in C
 	int8_t ctemps[4]; // Controller temperatures in C
 	
-	int16_t currents[4];
+	int16_t currents[4]; // 10s of mA
+	uint16_t voltages[4]; // 10s of mV
+	uint8_t error_codes[4]; // Error codes from controllers
+	int16_t drive_fb[4]; // Feedback of PWM output level from controllers
 	
     uint16_t flags; // bit 0 = estop
+
+	uint32_t uptime;
 } __attribute__((packed, aligned(4)));
 
 // Y - response to ping
@@ -84,4 +89,6 @@ struct pkt_stat_pingresp {
 	struct pkt_header header;
 } __attribute__((packed));
 
-#endif	/* UDP_MESSAGE_H */
+
+#endif	/* MESSAGE_H */
+

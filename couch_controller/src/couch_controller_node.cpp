@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <ctime>
+#include <sstream>
 #include <sys/time.h>
 
 #include <ros/ros.h>
@@ -31,6 +32,8 @@ namespace couch_controller
 				mtempsPub = nh.advertise<std_msgs::Int32MultiArray>("mtemps", 2);
 				ctempsPub = nh.advertise<std_msgs::Int32MultiArray>("ctemps", 2);
 				currentsPub = nh.advertise<std_msgs::Float64MultiArray>("currents", 2);
+				errorStringPub = nh.advertise<std_msgs::String>("errors", 2);
+				openLoopPub = nh.advertise<std_msgs::Bool>("open_loop", 2);
 				
 				cmdVelSub = nh.subscribe("cmd_vel", 1, &ControllerNode::cmdVelCallback,
 						this, ros::TransportHints().tcpNoDelay());
@@ -39,7 +42,12 @@ namespace couch_controller
 
 				std::string ip;
 				pnh.param("ip_addr", ip, std::string("192.168.1.185"));
-				controller = new Controller(ip);
+
+				// Used to disable closed loop motor control
+				bool openLoop;
+				pnh.param("open_loop", openLoop, false);
+
+				controller = new Controller(ip, openLoop);
 
 				setTime();
 
@@ -112,6 +120,8 @@ namespace couch_controller
 			ros::Publisher mtempsPub;
 			ros::Publisher ctempsPub;
 			ros::Publisher currentsPub;
+			ros::Publisher errorStringPub;
+			ros::Publisher openLoopPub;
 
 			ros::Subscriber cmdVelSub;
 			ros::Subscriber cmdRawSub;
@@ -159,8 +169,9 @@ namespace couch_controller
 					double vels[4] = {0, 0, 0, 0};
 					controller->setVels(vels);
 
-				if (cmdVelTimeoutCounter == (cmdVelTimeout+1))
-					ROS_WARN("cmd_vel timeout occurred\n");
+					if (cmdVelTimeoutCounter == (cmdVelTimeout + 1)) {
+						ROS_WARN("cmd_vel timeout occurred\n");
+					}
 				}
 
 				cmdVelTimeoutCounter++;
@@ -192,14 +203,17 @@ namespace couch_controller
 					ctempsMsg.data[2] = status.ctemps[Controller::FRONT_RIGHT];
 					ctempsMsg.data[3] = status.ctemps[Controller::BACK_RIGHT];
 					ctempsPub.publish(ctempsMsg);
+
+					errorStringPub.publish(generateErrorString(status.errors, status.flags));
 				}
 
 				ros::Time rosTimestamp(status.timestamp.tv_sec, status.timestamp.tv_nsec);
 
 				ros::Time now = ros::Time::now();
-				// fallback time calculation if time is bad
-				if (fabs((now - rosTimestamp).toSec()) > 0.05) {
-					std::cout << "rt " << rosTimestamp << ", now " << now << std::endl;
+				// Fallback time calculation if time is bad
+				if (fabs((now - rosTimestamp).toSec()) > 1.0) {
+					// Controller must have reset
+					std::cout << "Controller time is " << rosTimestamp << "; it is now " << now << std::endl;
 					setTime();
 					rosTimestamp = now;
 				}
@@ -220,6 +234,23 @@ namespace couch_controller
 				odomRawMsg.data[6] = status.vels[Controller::FRONT_RIGHT];
 				odomRawMsg.data[7] = status.vels[Controller::BACK_RIGHT];
 				odomRawPub.publish(odomRawMsg);
+
+				openLoopPub.publish(controller->isOpenLoop());
+			}
+
+
+
+			std::string generateErrorString(const int (&merrors)[4], const int flags)
+			{
+				std::stringstream errStream;
+
+				for (int i = 0; i < 4; ++i) {
+					errStream << "Motor controller " << i + ": "
+						<< controller->getMCErrorString(merrors[i]) << std::endl;
+				}
+				errStream << "Controller flags: 0x" << std::hex << flags;
+
+				return errStream.str();
 			}
 
 			void processCmdVel(double (&vels)[4], const geometry_msgs::Twist& cmdVel)
