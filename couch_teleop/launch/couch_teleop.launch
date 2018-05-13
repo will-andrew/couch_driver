@@ -1,6 +1,7 @@
 <launch>
 	<node pkg="couch_teleop" type="couch_teleop_node" name="couch_teleop_node" output="screen">
-		<param name="joy_port" value="/dev/input/js0" />
+		<param name="joy_device" value="/dev/input/js0" />
+		<param name="joy_event_device" value="/dev/input/event12" />
 
 		<remap from="/teleop/cmd_raw" to="/controller/cmd_raw"/>
 	</node>
